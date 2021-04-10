@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd 
 import plotly.express as px
 from PIL import Image
+import requests
 
 
 #carregando dados
@@ -84,7 +85,7 @@ if paginas == 'Vacinas':
     """)
 
 
-    image = Image.open(r'C:\Users\Jefsu\Documents\Python Scripts\Dashboard COVID\cloud.png')
+    image = Image.open(requests.get('https://raw.githubusercontent.com/Jefsuu/covid-dashboard-streamlit/main/cloud.png', stream=True).raw)
     st.markdown("<h4 style='text-align: center; color: black;'>Vacinas mais utilizadas</h4>", unsafe_allow_html=True)
     st.image(image)
 
