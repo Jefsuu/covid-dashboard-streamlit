@@ -93,6 +93,10 @@ if paginas == 'Vacinação':
             showlegend=False)
 
     st.plotly_chart(fig, use_container_width=True)
+    
+    #link da fonte dos dados
+    st.markdown("""
+    [Fonte dos dados](https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations)""")
 
 
 if paginas == 'Vacinas':
