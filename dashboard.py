@@ -20,7 +20,11 @@ test = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/
 usecols=['Entity', 'Daily change in cumulative total', 'Date'], parse_dates=['Date'])
 test['Date'] = pd.to_datetime(test['Date']).dt.date
 
-
+#dados brasil
+cities = pd.read_csv('https://raw.githubusercontent.com/wcota/covid19br/master/cases-gps.csv')
+cities.drop(cities[cities['type']=='D1'].index, inplace=True)
+cities.drop(columns=['type', 'total_per_100k_inhabitants'], inplace=True)
+cities.reset_index(drop=True, inplace=True)
 
 #Configurações da pagina
 st.set_page_config(
@@ -31,7 +35,7 @@ st.set_page_config(
 
 #paginas
 st.sidebar.title('Navegação')
-paginas = st.sidebar.radio('Paginas', ['Vacinação', 'Vacinas', 'Testagem'])
+paginas = st.sidebar.radio('Paginas', ['Vacinação', 'Vacinas', 'Testagem', 'Brasil'])
 
 
 
@@ -171,6 +175,27 @@ if paginas == 'Testagem':
         st.write(group)
 
     #grafico de linha
+
+    plot = test[test['country'].isin(label_to_filter)].reset_index(drop=True)
+    plot['date'] = pd.to_datetime(plot['date'], format='%Y-%m-%d')
+
+    
+    a = plot.set_index('country')
+    a = a.groupby('country').rolling(7, min_periods=1).mean()
+    b = a.reset_index().join(plot['date'])
+
+    fig = px.line(b, x='date', y='daily_test', color='country', labels={'date':'Data', 'daily_test':'Nº de testes'})
+    fig.update_layout(
+    title={
+        'text': "<b>Numero de testagens por dia</b>",
+        'y':0.95,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'},
+        showlegend=True)
+    st.plotly_chart(fig)
+
+    #grafico de barra
     test_bar_plot = test.groupby('country').sum()
     test_bar_plot.sort_values('daily_test', ascending=False, inplace=True)
     fig = px.bar(test_bar_plot, range_x=[-0.6,25.5], labels={'country':'País', 'value':'Nº de testes'})
@@ -189,11 +214,47 @@ if paginas == 'Testagem':
         #link da fonte dos dados
     st.markdown("[Fonte dos dados](https://github.com/owid/covid-19-data/tree/master/public/data/testing)")
 
+if paginas == 'Brasil':
+    st.title('Dados sobre Covid-19 no Brasil')
+    st.markdown("""
+    Nessa seção serão apresentados dados sobre a Covid-19 no Brasil, numero de casos, 
+    mortes, testes e vacinação""")
+
+    st.subheader('Dados por cidade e estado')
+    #selecinando por estado
+    cities['cidade'] = cities.name.str.split('/').str[0]
+    cities['estado']= cities.name.str.split('/').str[1]
+    estados = cities['estado'].unique()
+    estado_filter = st.multiselect(
+    label="Escolha o estado desejado para visualizar os dados",
+    options=estados)
+
+    st.dataframe(cities[cities['estado'].isin(estado_filter)][['cidade','total']].reset_index(drop=True))
+
+
+    #mapa de casos nas cidades
+    fig = px.scatter_mapbox(data_frame=cities, lat='lat', lon='lon',size='total', mapbox_style='open-street-map',
+     zoom=2.7, hover_name='name')
+    fig.update_layout(title={
+    'text': "<b>Numero de casos por cidades</b>",
+    'y':1,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig)
+
+
+    st.markdown("[Fonte dos dados](https://github.com/wcota/covid19br)")
+    
+
+
+
 #progresso
 st.sidebar.title('Desenvolvimento')
 st.sidebar.info("""
     Dados que serão adicionados:
-    * Testagem de Covid-19
     * Covid no Brasil""")
 
 #informações de contato
