@@ -12,6 +12,7 @@ df = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/pu
 parse_dates=['date'])
 df['date'] = pd.to_datetime(df['date']).dt.date
 df.rename(columns={'location':'country'}, inplace=True)
+
 #dados das vacinas
 vaccines = pd.read_csv('https://raw.githubusercontent.com/Jefsuu/covid-dashboard-streamlit/main/vaccine_country.csv', usecols=['country', 'vaccines'])
 
@@ -26,6 +27,13 @@ cities.drop(cities[cities['type']=='D1'].index, inplace=True)
 cities.drop(columns=['type', 'total_per_100k_inhabitants'], inplace=True)
 cities.reset_index(drop=True, inplace=True)
 
+#total world
+total_world = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv',
+ usecols=['location', 'date','new_cases','new_deaths', 'new_vaccinations', 'new_tests'], parse_dates=['date'])
+total_world['date'] = pd.to_datetime(total_world['date'])
+total_world.rename(columns={'location':'country','new_cases':'cases', 'new_deaths':'deaths',
+'new_vaccinations':'vaccinations', 'new_tests':'tests'}, inplace=True)
+
 #Configurações da pagina
 st.set_page_config(
     layout="centered",
@@ -35,7 +43,7 @@ st.set_page_config(
 
 #paginas
 st.sidebar.title('Navegação')
-paginas = st.sidebar.radio('Paginas', ['Vacinação', 'Vacinas', 'Testagem', 'Brasil'])
+paginas = st.sidebar.radio('Paginas', ['Vacinação','Casos', 'Vacinas', 'Testagem', 'Brasil'])
 
 
 
@@ -134,6 +142,64 @@ if paginas == 'Vacinas':
     st.markdown("<h4 style='text-align: center; color: black;'>Vacinas mais utilizadas</h4>", unsafe_allow_html=True)
     st.image(image)
 
+if paginas == 'Casos':
+
+    st.title('Dados sobre o numero de casos de Covid-19 no mundo')
+    st.markdown(
+    """
+    Dados sobre o numero de casos nos Países
+
+    Na tabela é mostrado a média do numero de casos, o menor numero de casos em um dia,
+    o maior numero de casos em um dia e o total de casos até o momento.
+
+    """)
+    label_to_filter = st.multiselect(
+        label="Escolha o País desejado para visualizar os dados",
+        options=paises, default='Brazil')
+
+    if st.checkbox('Mostrar tabela'):
+        st.subheader('Tabela de dados')
+        group = total_world[total_world['country'].isin(label_to_filter)]
+        group = group.groupby(['country'])['cases'].agg(['mean', 'min', 'max', 'sum'])
+        group = pd.DataFrame(group)
+        group.reset_index(inplace=True)
+        group['mean'] = group['mean'].apply(lambda x: round(x))
+        st.write(group)
+
+    cases = total_world[['country','date', 'cases']]
+    cases = cases[cases['country'].isin(label_to_filter)].reset_index(drop=True)
+    cases_group = cases.set_index('country')
+    cases_group = cases_group.groupby('country').rolling(7, min_periods=1).mean()
+    plot_cases = cases_group.reset_index().join(cases['date'])
+
+    fig = px.line(data_frame=plot_cases, x='date', y='cases', color='country', labels={'cases':'Nº de casos',
+    'date':'Data'})
+    fig.update_layout(
+    title={
+        'text': "<b>Numero de casos por País</b>",
+        'y':0.95,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'},
+        showlegend=True)
+
+    st.plotly_chart(fig, use_container_width=True)
+
+    case_bar_plot = total_world.groupby('country').agg({'cases':'sum'})
+    case_bar_plot.sort_values('cases', inplace=True, ascending=False)
+
+    fig = px.bar(case_bar_plot, range_x=[-0.6,25.5], labels={'country':'Pais', 'value':'Nº de casos'})
+    fig.update_layout(barmode='group', xaxis_tickangle=-45)
+    fig.update_layout(
+        title={
+            'text': "<b>Numero total de casos por País</b>",
+            'y':0.95,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+            showlegend=False)
+
+    st.plotly_chart(fig, use_container_width=True)
 
 #Testagem
 if paginas == 'Testagem':
@@ -237,6 +303,21 @@ if paginas == 'Brasil':
      zoom=2.7, hover_name='name')
     fig.update_layout(title={
     'text': "<b>Numero de casos por cidades</b>",
+    'y':1,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig)
+
+    #grafico de casos por estado
+    casos_estados = cities.groupby('estado').agg({'total':'sum', 'lat':'mean','lon':'mean'}).reset_index()
+
+    fig = px.scatter_mapbox(data_frame=casos_estados, lat='lat', lon='lon', size='total',
+     mapbox_style='open-street-map', zoom=2.7, hover_name='estado')
+    fig.update_layout(title={
+    'text': "<b>Numero de casos por estados</b>",
     'y':1,
     'x':0.5,
     'xanchor': 'center',
