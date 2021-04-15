@@ -57,8 +57,8 @@ if paginas == 'Vacinação':
         """
         Dados sobre o progresso de vacinação nos Países
 
-        Na tabela é mostrado a média do numero de vacinações, o menor numero de vacinação em um dia,
-        o maior numero de vacinação em um dia e o total de vacinações até o momento
+        Na tabela é mostrado a média do número de vacinações, o menor número de vacinação em um dia,
+        o maior número de vacinação em um dia e o total de vacinações até o momento
 
         """)
 
@@ -83,7 +83,7 @@ if paginas == 'Vacinação':
         st.write(group)
 
 
-    #grafico de numero de vacinações nos países
+    #grafico de número de vacinações nos países
 
     vacc_line_plot = df[df['country'].isin(label_to_filter)][['country','date', 'daily_vaccinations']].set_index('date')
     fig = px.line(vacc_line_plot, labels={'date':'Data', 'value':'Nº de vacinações'}, color='country')
@@ -105,7 +105,7 @@ if paginas == 'Vacinação':
     fig.update_layout(barmode='group', xaxis_tickangle=-45)
     fig.update_layout(
         title={
-            'text': "<b>Numero total de vacinações por País</b>",
+            'text': "<b>Número total de vacinações por País</b>",
             'y':0.95,
             'x':0.5,
             'xanchor': 'center',
@@ -144,13 +144,13 @@ if paginas == 'Vacinas':
 
 if paginas == 'Casos':
 
-    st.title('Dados sobre o numero de casos de Covid-19 no mundo')
+    st.title('Dados sobre o número de casos de Covid-19 no mundo')
     st.markdown(
     """
-    Dados sobre o numero de casos nos Países
+    Dados sobre o número de casos nos Países
 
-    Na tabela é mostrado a média do numero de casos, o menor numero de casos em um dia,
-    o maior numero de casos em um dia e o total de casos até o momento.
+    Na tabela é mostrado a média do número de casos, o menor número de casos em um dia,
+    o maior número de casos em um dia e o total de casos até o momento.
 
     """)
     label_to_filter = st.multiselect(
@@ -176,7 +176,7 @@ if paginas == 'Casos':
     'date':'Data'})
     fig.update_layout(
     title={
-        'text': "<b>Numero de casos por País</b>",
+        'text': "<b>Número de casos por País</b>",
         'y':0.95,
         'x':0.5,
         'xanchor': 'center',
@@ -192,7 +192,7 @@ if paginas == 'Casos':
     fig.update_layout(barmode='group', xaxis_tickangle=-45)
     fig.update_layout(
         title={
-            'text': "<b>Numero total de casos por País</b>",
+            'text': "<b>Número total de casos por País</b>",
             'y':0.95,
             'x':0.5,
             'xanchor': 'center',
@@ -200,6 +200,8 @@ if paginas == 'Casos':
             showlegend=False)
 
     st.plotly_chart(fig, use_container_width=True)
+
+    st.markdown("[Fonte dos dados](https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv)")
 
 #Testagem
 if paginas == 'Testagem':
@@ -209,10 +211,10 @@ if paginas == 'Testagem':
         """
         Dados sobre a testagem de Covid-19 nos Países
 
-        Na tabela é mostrado a média do numero de testagens, o menor numero de testagem em um dia,
-        o maior numero de testagem em um dia e o total de testagens até o momento.
+        Na tabela é mostrado a média do número de testagens, o menor número de testagem em um dia,
+        o maior número de testagem em um dia e o total de testagens até o momento.
 
-        Para alguns países, não há dados desses numeros na base de dados.
+        Para alguns países, não há dados desses números na base de dados.
 
         """)
 
@@ -253,7 +255,7 @@ if paginas == 'Testagem':
     fig = px.line(b, x='date', y='daily_test', color='country', labels={'date':'Data', 'daily_test':'Nº de testes'})
     fig.update_layout(
     title={
-        'text': "<b>Numero de testagens por dia</b>",
+        'text': "<b>Número de testagens por dia</b>",
         'y':0.95,
         'x':0.5,
         'xanchor': 'center',
@@ -269,7 +271,7 @@ if paginas == 'Testagem':
     fig.update_layout(barmode='group', xaxis_tickangle=-45)
     fig.update_layout(
         title={
-            'text': "<b>Numero total de testagens por País</b>",
+            'text': "<b>Número total de testagens por País</b>",
             'y':0.95,
             'x':0.5,
             'xanchor': 'center',
@@ -283,7 +285,7 @@ if paginas == 'Testagem':
 if paginas == 'Brasil':
     st.title('Dados sobre Covid-19 no Brasil')
     st.markdown("""
-    Nessa seção serão apresentados dados sobre a Covid-19 no Brasil, numero de casos, 
+    Nessa seção serão apresentados dados sobre a Covid-19 no Brasil, número de casos, 
     mortes, testes e vacinação""")
 
     st.subheader('Dados por cidade e estado')
@@ -302,7 +304,7 @@ if paginas == 'Brasil':
     fig = px.scatter_mapbox(data_frame=cities, lat='lat', lon='lon',size='total', mapbox_style='open-street-map',
      zoom=2.7, hover_name='name')
     fig.update_layout(title={
-    'text': "<b>Numero de casos por cidades</b>",
+    'text': "<b>Número de casos por cidades</b>",
     'y':1,
     'x':0.5,
     'xanchor': 'center',
@@ -317,7 +319,7 @@ if paginas == 'Brasil':
     fig = px.scatter_mapbox(data_frame=casos_estados, lat='lat', lon='lon', size='total',
      mapbox_style='open-street-map', zoom=2.7, hover_name='estado')
     fig.update_layout(title={
-    'text': "<b>Numero de casos por estados</b>",
+    'text': "<b>Número de casos por estados</b>",
     'y':1,
     'x':0.5,
     'xanchor': 'center',
