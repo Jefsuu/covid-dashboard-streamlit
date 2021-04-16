@@ -29,7 +29,7 @@ cities.reset_index(drop=True, inplace=True)
 
 #total world
 total_world = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv',
- usecols=['location', 'date','new_cases','new_deaths', 'new_vaccinations', 'new_tests'], parse_dates=['date'])
+ usecols=['location', 'date','new_cases','new_deaths'], parse_dates=['date'])
 total_world['date'] = pd.to_datetime(total_world['date'])
 total_world.rename(columns={'location':'country','new_cases':'cases', 'new_deaths':'deaths',
 'new_vaccinations':'vaccinations', 'new_tests':'tests'}, inplace=True)
@@ -84,7 +84,7 @@ if paginas == 'Vacinação':
 
 
     #grafico de número de vacinações nos países
-
+    st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
     vacc_line_plot = df[df['country'].isin(label_to_filter)][['country','date', 'daily_vaccinations']].set_index('date')
     fig = px.line(vacc_line_plot, labels={'date':'Data', 'value':'Nº de vacinações'}, color='country')
     fig.update_layout(
@@ -97,6 +97,7 @@ if paginas == 'Vacinação':
             showlegend=True)
 
     st.plotly_chart(fig, use_container_width=True)
+    
 
     #grafico de barras
     vacc_bar_plot = df.groupby(by=['country'])['daily_vaccinations'].sum()
@@ -166,12 +167,14 @@ if paginas == 'Casos':
         group['mean'] = group['mean'].apply(lambda x: round(x))
         st.write(group)
 
+    #aplicando média movel
     cases = total_world[['country','date', 'cases']]
     cases = cases[cases['country'].isin(label_to_filter)].reset_index(drop=True)
     cases_group = cases.set_index('country')
     cases_group = cases_group.groupby('country').rolling(7, min_periods=1).mean()
     plot_cases = cases_group.reset_index().join(cases['date'])
 
+    st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
     fig = px.line(data_frame=plot_cases, x='date', y='cases', color='country', labels={'cases':'Nº de casos',
     'date':'Data'})
     fig.update_layout(
@@ -214,8 +217,6 @@ if paginas == 'Testagem':
         Na tabela é mostrado a média do número de testagens, o menor número de testagem em um dia,
         o maior número de testagem em um dia e o total de testagens até o momento.
 
-        Para alguns países, não há dados desses números na base de dados.
-
         """)
 
     label_to_filter = st.multiselect(
@@ -252,6 +253,8 @@ if paginas == 'Testagem':
     a = a.groupby('country').rolling(7, min_periods=1).mean()
     b = a.reset_index().join(plot['date'])
 
+    st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
+    st.text('Para alguns países, não há dados desses números na base de dados.')
     fig = px.line(b, x='date', y='daily_test', color='country', labels={'date':'Data', 'daily_test':'Nº de testes'})
     fig.update_layout(
     title={
