@@ -6,33 +6,36 @@ from PIL import Image
 import requests
 
 
-#carregando dados
-#dados de vacinção
-df = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/vaccinations/vaccinations.csv',
-parse_dates=['date'])
-df['date'] = pd.to_datetime(df['date']).dt.date
-df.rename(columns={'location':'country'}, inplace=True)
 
-#dados das vacinas
-vaccines = pd.read_csv('https://raw.githubusercontent.com/Jefsuu/covid-dashboard-streamlit/main/vaccine_country.csv', usecols=['country', 'vaccines'])
-
-#dados de testagem
-test = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/testing/covid-testing-all-observations.csv',
-usecols=['Entity', 'Daily change in cumulative total', 'Date'], parse_dates=['Date'])
-test['Date'] = pd.to_datetime(test['Date']).dt.date
-
-#dados brasil
-cities = pd.read_csv('https://raw.githubusercontent.com/wcota/covid19br/master/cases-gps.csv')
-cities.drop(cities[cities['type']=='D1'].index, inplace=True)
-cities.drop(columns=['type', 'total_per_100k_inhabitants'], inplace=True)
-cities.reset_index(drop=True, inplace=True)
-
-#total world
+#total world dados
 total_world = pd.read_csv('https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv',
- usecols=['location', 'date','new_cases','new_deaths'], parse_dates=['date'])
+ usecols=['location', 'date','new_cases','new_deaths', 'new_vaccinations', 'new_tests'], parse_dates=['date'])
 total_world['date'] = pd.to_datetime(total_world['date'])
 total_world.rename(columns={'location':'country','new_cases':'cases', 'new_deaths':'deaths',
 'new_vaccinations':'vaccinations', 'new_tests':'tests'}, inplace=True)
+
+#dados vacinas
+vaccines = pd.read_csv('https://raw.githubusercontent.com/Jefsuu/covid-dashboard-streamlit/main/vaccine_country.csv',
+ usecols=['country', 'vaccines'])
+
+
+
+#função para lineplot com média móvel
+def group_plot(dataframe,index, paises, data):
+    df = dataframe[dataframe[index].isin(paises)].reset_index(drop=True)
+    df_group = df.set_index(index)
+    df_group = df_group.groupby(index).rolling(7, min_periods=1).mean()
+    df_plot = df_group.reset_index().join(df[data])
+    return df_plot
+
+#função de tabela com estatisticas
+def group_tab(dataframe, valor, paises, index):
+    df = dataframe[dataframe[index].isin(paises)]
+    df_group = df.groupby(index)[valor].agg(['mean', 'min', 'max', 'sum'])
+    df_group.reset_index(inplace=True)
+    df_group['mean'] = df_group['mean'].apply(lambda x: round(x))
+    return df_group
+
 
 #Configurações da pagina
 st.set_page_config(
@@ -43,12 +46,12 @@ st.set_page_config(
 
 #paginas
 st.sidebar.title('Navegação')
-paginas = st.sidebar.radio('Paginas', ['Vacinação','Casos', 'Vacinas', 'Testagem', 'Brasil'])
+paginas = st.sidebar.radio('Paginas', ['Vacinação','Casos','Mortes', 'Vacinas', 'Testagem', 'Brasil'])
 
 
 
 #lista de países
-paises = df.country.unique().tolist()
+paises = total_world.country.unique().tolist()
 
 #dashboard
 if paginas == 'Vacinação':
@@ -62,9 +65,9 @@ if paginas == 'Vacinação':
 
         """)
 
-    df = df[['country', 'date', 'daily_vaccinations']]
-    df.dropna(subset=['daily_vaccinations'], inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    vaccination = total_world[['country', 'date', 'vaccinations']]
+    vaccination.dropna(subset=['vaccinations'], inplace=True)
+    vaccination.reset_index(drop=True, inplace=True)
 
     
 
@@ -75,18 +78,14 @@ if paginas == 'Vacinação':
 
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        group = df[df['country'].isin(label_to_filter)]
-        group = group.groupby(['country'])['daily_vaccinations'].agg(['mean', 'min', 'max', 'sum'])
-        group = pd.DataFrame(group)
-        group.reset_index(inplace=True)
-        group['mean'] = group['mean'].apply(lambda x: round(x))
-        st.write(group)
+        st.write(group_tab(vaccination, 'vaccinations', label_to_filter, 'country'))
 
 
     #grafico de número de vacinações nos países
     st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
-    vacc_line_plot = df[df['country'].isin(label_to_filter)][['country','date', 'daily_vaccinations']].set_index('date')
-    fig = px.line(vacc_line_plot, labels={'date':'Data', 'value':'Nº de vacinações'}, color='country')
+    #vacc_line_plot = df[df['country'].isin(label_to_filter)][['country','date', 'daily_vaccinations']].set_index('date')
+    fig = px.line(group_plot(vaccination, 'country', label_to_filter, 'date'),x='date', y='vaccinations',
+     labels={'date':'Data', 'value':'Nº de vacinações'}, color='country')
     fig.update_layout(
         title={
             'text': "<b>Vacinações por dia</b>",
@@ -100,7 +99,7 @@ if paginas == 'Vacinação':
     
 
     #grafico de barras
-    vacc_bar_plot = df.groupby(by=['country'])['daily_vaccinations'].sum()
+    vacc_bar_plot = vaccination.groupby(by=['country'])['vaccinations'].sum()
     vacc_bar_plot.sort_values(ascending=False, inplace=True)
     fig = px.bar(vacc_bar_plot, range_x=[-0.6,25.5], labels={'country':'País', 'value':'Nº de vacinações'})
     fig.update_layout(barmode='group', xaxis_tickangle=-45)
@@ -117,6 +116,7 @@ if paginas == 'Vacinação':
 
     #link da fonte dos dados
     st.markdown("[Fonte dos dados](https://github.com/owid/covid-19-data/tree/master/public/data/vaccinations)")
+
 
 
 if paginas == 'Vacinas':
@@ -145,7 +145,7 @@ if paginas == 'Vacinas':
 
 if paginas == 'Casos':
 
-    st.title('Dados sobre o número de casos de Covid-19 no mundo')
+    st.title('Dados sobre casos de Covid-19')
     st.markdown(
     """
     Dados sobre o número de casos nos Países
@@ -154,29 +154,23 @@ if paginas == 'Casos':
     o maior número de casos em um dia e o total de casos até o momento.
 
     """)
+    #dados casos
+    cases = total_world[['country','date', 'cases']]
+
     label_to_filter = st.multiselect(
         label="Escolha o País desejado para visualizar os dados",
         options=paises, default='Brazil')
 
+
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        group = total_world[total_world['country'].isin(label_to_filter)]
-        group = group.groupby(['country'])['cases'].agg(['mean', 'min', 'max', 'sum'])
-        group = pd.DataFrame(group)
-        group.reset_index(inplace=True)
-        group['mean'] = group['mean'].apply(lambda x: round(x))
-        st.write(group)
+        st.write(group_tab(cases, 'cases', label_to_filter, 'country'))
 
-    #aplicando média movel
-    cases = total_world[['country','date', 'cases']]
-    cases = cases[cases['country'].isin(label_to_filter)].reset_index(drop=True)
-    cases_group = cases.set_index('country')
-    cases_group = cases_group.groupby('country').rolling(7, min_periods=1).mean()
-    plot_cases = cases_group.reset_index().join(cases['date'])
 
     st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
-    fig = px.line(data_frame=plot_cases, x='date', y='cases', color='country', labels={'cases':'Nº de casos',
-    'date':'Data'})
+
+    fig = px.line(data_frame=group_plot(cases, 'country', label_to_filter, 'date'), x='date', y='cases',
+     color='country', labels={'cases':'Nº de casos','date':'Data'})
     fig.update_layout(
     title={
         'text': "<b>Número de casos por País</b>",
@@ -206,10 +200,63 @@ if paginas == 'Casos':
 
     st.markdown("[Fonte dos dados](https://github.com/owid/covid-19-data/blob/master/public/data/owid-covid-data.csv)")
 
+if paginas == 'Mortes':
+
+    st.title('Dados sobre mortes de Covid-19')
+    st.markdown(
+    """
+    Dados sobre o número de mortes nos Países
+
+    Na tabela é mostrado a média do número de mortes, o menor número de mortes em um dia,
+    o maior número de mortes em um dia e o total de mortes até o momento.
+
+    """)
+    #dados mortes
+    deaths = total_world[['country', 'date', 'deaths']]
+
+    # Multiselect com os países
+    label_to_filter = st.multiselect(
+        label="Escolha o País desejado para visualizar os dados",
+        options=paises, default='Brazil')
+
+    if st.checkbox('Mostrar tabela'):
+        st.subheader('Tabela de dados')
+        st.write(group_tab(deaths, 'deaths', label_to_filter, 'country'))
+
+    
+    st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
+    fig = px.line(data_frame=group_plot(deaths, 'country', label_to_filter, 'date' ), x='date', y='deaths',
+    color='country', labels={'date':'Data', 'deaths':'Nº de mortes'})
+    fig.update_layout(
+    title={
+        'text': "<b>Número de mortes por País</b>",
+        'y':0.95,
+        'x':0.5,
+        'xanchor': 'center',
+        'yanchor': 'top'},
+        showlegend=True)
+    st.plotly_chart(fig)
+
+    #grafico de barra
+    death_bar_plot = deaths.groupby('country').sum()
+    death_bar_plot.sort_values('deaths', ascending=False, inplace=True)
+    fig = px.bar(death_bar_plot, range_x=[-0.6,25.5], labels={'country':'País', 'value':'Nº de mortes'})
+    
+    fig.update_layout(barmode='group', xaxis_tickangle=-45)
+    fig.update_layout(
+        title={
+            'text': "<b>Número total de mortes por País</b>",
+            'y':0.95,
+            'x':0.5,
+            'xanchor': 'center',
+            'yanchor': 'top'},
+            showlegend=False)
+    st.plotly_chart(fig)
+
 #Testagem
 if paginas == 'Testagem':
 
-    st.title('Testagem de Covid-19 nos Países')
+    st.title('Dados sobre testagem de Covid-19')
     st.markdown(
         """
         Dados sobre a testagem de Covid-19 nos Países
@@ -218,44 +265,24 @@ if paginas == 'Testagem':
         o maior número de testagem em um dia e o total de testagens até o momento.
 
         """)
+    test = total_world[['country', 'tests', 'date']]
 
     label_to_filter = st.multiselect(
         label="Escolha o País desejado para visualizar os dados",
         options=paises, default='Brazil')
 
-    test['country'] = test['Entity'].apply(lambda x: str(x))
-    test['country'] = test.country.astype('string')
-    test['country'] = test.country.str.split('-').str[0]
-    test.drop(columns=['Entity'], inplace=True)
-    test = test[['country','Date', 'Daily change in cumulative total']]
-    test.rename(columns={'Daily change in cumulative total':'daily_test', 'Date':'date'}, inplace=True)
-    test.country = test.country.str.strip()
     
-    #tabela dados vacinação
+    
+    #tabela dados testes
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-
-        group = test[test['country'].isin(label_to_filter)]
-        group = group.groupby(['country'])['daily_test'].agg(['mean', 'min', 'max', 'sum'])
-        group = pd.DataFrame(group)
-        group.reset_index(inplace=True)
-        group.fillna(0, inplace=True)
-        group['mean'] = group['mean'].apply(lambda x: round(x))
-        st.write(group)
+        st.write(group_tab(test, 'tests', label_to_filter, 'country'))
 
     #grafico de linha
 
-    plot = test[test['country'].isin(label_to_filter)].reset_index(drop=True)
-    plot['date'] = pd.to_datetime(plot['date'], format='%Y-%m-%d')
-
-    
-    a = plot.set_index('country')
-    a = a.groupby('country').rolling(7, min_periods=1).mean()
-    b = a.reset_index().join(plot['date'])
-
     st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
     st.text('Para alguns países, não há dados desses números na base de dados.')
-    fig = px.line(b, x='date', y='daily_test', color='country', labels={'date':'Data', 'daily_test':'Nº de testes'})
+    fig = px.line(group_plot(test, 'country', label_to_filter, 'date'), x='date', y='tests', color='country', labels={'date':'Data', 'tests':'Nº de testes'})
     fig.update_layout(
     title={
         'text': "<b>Número de testagens por dia</b>",
@@ -268,7 +295,7 @@ if paginas == 'Testagem':
 
     #grafico de barra
     test_bar_plot = test.groupby('country').sum()
-    test_bar_plot.sort_values('daily_test', ascending=False, inplace=True)
+    test_bar_plot.sort_values('tests', ascending=False, inplace=True)
     fig = px.bar(test_bar_plot, range_x=[-0.6,25.5], labels={'country':'País', 'value':'Nº de testes'})
     
     fig.update_layout(barmode='group', xaxis_tickangle=-45)
@@ -286,6 +313,13 @@ if paginas == 'Testagem':
     st.markdown("[Fonte dos dados](https://github.com/owid/covid-19-data/tree/master/public/data/testing)")
 
 if paginas == 'Brasil':
+
+    #dados brasil
+    cities = pd.read_csv('https://raw.githubusercontent.com/wcota/covid19br/master/cases-gps.csv')
+    cities.drop(cities[cities['type']=='D1'].index, inplace=True)
+    cities.drop(columns=['type', 'total_per_100k_inhabitants'], inplace=True)
+    cities.reset_index(drop=True, inplace=True)
+
     st.title('Dados sobre Covid-19 no Brasil')
     st.markdown("""
     Nessa seção serão apresentados dados sobre a Covid-19 no Brasil, número de casos, 
