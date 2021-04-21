@@ -19,7 +19,6 @@ vaccines = pd.read_csv('https://raw.githubusercontent.com/Jefsuu/covid-dashboard
  usecols=['country', 'vaccines'])
 
 
-
 #função para lineplot com média móvel
 def group_plot(dataframe,index, paises, data):
     df = dataframe[dataframe[index].isin(paises)].reset_index(drop=True)
@@ -35,6 +34,13 @@ def group_tab(dataframe, valor, paises, index):
     df_group.reset_index(inplace=True)
     df_group['mean'] = df_group['mean'].apply(lambda x: round(x))
     return df_group
+
+#função para carregar dados sobre estado brasileiros
+def load_br_total(loc_states, br_total, use_cols):
+    loc_states = pd.read_csv(loc_states)
+    br_total = pd.read_csv(br_total, usecols=use_cols)
+    br_total = br_total.merge(loc_states, left_on='state', right_on='estado' )
+    return br_total
 
 
 #Configurações da pagina
@@ -320,6 +326,10 @@ if paginas == 'Brasil':
     cities.drop(columns=['type', 'total_per_100k_inhabitants'], inplace=True)
     cities.reset_index(drop=True, inplace=True)
 
+    br_total = load_br_total('https://raw.githubusercontent.com/Jefsuu/covid-dashboard-streamlit/main/loc_states.csv',
+    'https://raw.githubusercontent.com/wcota/covid19br/master/cases-brazil-total.csv',
+    ['state', 'deaths', 'tests', 'vaccinated'])
+
     st.title('Dados sobre Covid-19 no Brasil')
     st.markdown("""
     Nessa seção serão apresentados dados sobre a Covid-19 no Brasil, número de casos, 
@@ -364,6 +374,47 @@ if paginas == 'Brasil':
     fig.update_layout(
     margin=dict(l=20, r=20, t=20, b=20))
     st.plotly_chart(fig)
+
+    #mapa de testes por estado
+    fig = px.scatter_mapbox(data_frame=br_total, lat='lat', lon='lon', size='tests',
+    mapbox_style='open-street-map', zoom=2.7, hover_name='estado')
+    fig.update_layout(title={
+    'text': "<b>Número de testes por estados</b>",
+    'y':1,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig)
+
+    #mapa de vacinas por estado
+    fig = px.scatter_mapbox(data_frame=br_total, lat='lat', lon='lon', size='vaccinated',
+    mapbox_style='open-street-map', zoom=2.7, hover_name='estado')
+    fig.update_layout(title={
+    'text': "<b>Número de vacinas por estados</b>",
+    'y':1,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig)
+
+    #mapa de mortes por estado
+    fig = px.scatter_mapbox(data_frame=br_total, lat='lat', lon='lon', size='deaths',
+    mapbox_style='open-street-map', zoom=2.7, hover_name='estado')
+    fig.update_layout(title={
+    'text': "<b>Número de mortes por estados</b>",
+    'y':1,
+    'x':0.5,
+    'xanchor': 'center',
+    'yanchor': 'top'})
+    fig.update_layout(
+    margin=dict(l=20, r=20, t=20, b=20))
+    st.plotly_chart(fig)
+
+    
 
 
     st.markdown("[Fonte dos dados](https://github.com/wcota/covid19br)")
