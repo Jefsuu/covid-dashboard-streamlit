@@ -32,7 +32,9 @@ def group_tab(dataframe, valor, paises, index):
     df = dataframe[dataframe[index].isin(paises)]
     df_group = df.groupby(index)[valor].agg(['mean', 'min', 'max', 'sum'])
     df_group.reset_index(inplace=True)
+    df_group.fillna(0, inplace=True)
     df_group['mean'] = df_group['mean'].apply(lambda x: round(x))
+    
     return df_group
 
 #função para carregar dados sobre estado brasileiros
@@ -84,7 +86,7 @@ if paginas == 'Vacinação':
 
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        st.write(group_tab(vaccination, 'vaccinations', label_to_filter, 'country'))
+        st.dataframe(group_tab(vaccination, 'vaccinations', label_to_filter, 'country'))
 
 
     #grafico de número de vacinações nos países
@@ -170,7 +172,7 @@ if paginas == 'Casos':
 
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        st.write(group_tab(cases, 'cases', label_to_filter, 'country'))
+        st.dataframe(group_tab(cases, 'cases', label_to_filter, 'country'))
 
 
     st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
@@ -227,7 +229,7 @@ if paginas == 'Mortes':
 
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        st.write(group_tab(deaths, 'deaths', label_to_filter, 'country'))
+        st.dataframe(group_tab(deaths, 'deaths', label_to_filter, 'country'))
 
     
     st.text('Foi utilizado média móvel no gráfico para melhor visualização da tendência.')
@@ -282,7 +284,7 @@ if paginas == 'Testagem':
     #tabela dados testes
     if st.checkbox('Mostrar tabela'):
         st.subheader('Tabela de dados')
-        st.write(group_tab(test, 'tests', label_to_filter, 'country'))
+        st.dataframe(group_tab(test, 'tests', label_to_filter, 'country'))
 
     #grafico de linha
 
@@ -422,11 +424,7 @@ if paginas == 'Brasil':
 
 
 
-#progresso
-st.sidebar.title('Desenvolvimento')
-st.sidebar.info("""
-    Dados que serão adicionados:
-    * Covid no Brasil""")
+
 
 #informações de contato
 st.sidebar.title('Sobre')
